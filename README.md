@@ -8,4 +8,4 @@ This repository contains a modular implementation of the Deep Q Learning algorit
  - Dueling Q Networks and simple Q Network.
  - Polyak update (soft updating) or periodic update.
 
-It is implemented in a modular fashion so that the developer can choose the combination of componentes that better fits its needs.
+It is implemented in a modular fashion so that the developer can choose the combination of components that better fits its needs.

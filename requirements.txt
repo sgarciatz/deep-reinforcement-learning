@@ -2,7 +2,6 @@ absl-py==2.1.0
 cloudpickle==3.0.0
 contourpy==1.2.1
 cycler==0.12.1
-drl==0.0.1
 Farama-Notifications==0.0.4
 filelock==3.13.1
 fonttools==4.53.0
