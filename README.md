@@ -1,4 +1,4 @@
-#UAV-EDGE-DRL
+# Deep Reinforcement Learning
 
 This repository contains a modular implementation of the Deep Q Learning algorithm with multiple modifications:
 
