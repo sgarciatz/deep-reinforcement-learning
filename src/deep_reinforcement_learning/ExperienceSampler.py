@@ -1,7 +1,7 @@
 from collections import deque
 import random
 import torch
-from src.Experience import Experience
+from deep_reinforcement_learning.Experience import Experience
 
 
 class ExperienceSampler:

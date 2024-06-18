@@ -1,6 +1,6 @@
 import unittest
 import torch
-from src.QDuelingNetwork import QDuelingNetwork
+from deep_reinforcement_learning.QDuelingNetwork import QDuelingNetwork
 
 class test_QNetwork(unittest.TestCase):
 

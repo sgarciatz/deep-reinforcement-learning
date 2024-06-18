@@ -1,0 +1,16 @@
+[project]
+name = "deep-reinforcement-learning"
+authors = [
+    {name = "Santiago García Gil", email = "santiagogg@unex.es"},
+]
+description = "A modular implementantion of the Deep Q Learning Algorithm"
+license = {text = "MIT License"}
+version = "0.0.1"
+dependencies = [
+    "torch",
+    "numpy",
+    "gymnasium",
+    "tensorboard",
+    "pandas",
+    "matplotlib"
+]

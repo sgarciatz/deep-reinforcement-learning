@@ -1,6 +1,6 @@
 import torch
 import random
-from src.Experience import Experience
+from deep_reinforcement_learning.Experience import Experience
 import random
 import sys
 

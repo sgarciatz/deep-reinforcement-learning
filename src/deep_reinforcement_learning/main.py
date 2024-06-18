@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import time
 from pathlib import Path
-from src.ConfigurationLoader import ConfigurationLoader
+from deep_reinforcement_learning.ConfigurationLoader import ConfigurationLoader
 
 
 def parse_arguments ():

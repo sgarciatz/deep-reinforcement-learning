@@ -1,6 +1,6 @@
 import unittest
 import torch
-from src.BoltzmannPolicy import BoltzmannPolicy
+from deep_reinforcement_learning.BoltzmannPolicy import BoltzmannPolicy
 
 class test_BoltzmannPolicy(unittest.TestCase):
 

@@ -1,15 +1,15 @@
 import os
 import json
-from src.QEstimator import QEstimator
-from src.QNetwork import QNetwork
-from src.QDuelingNetwork import QDuelingNetwork
-from src.QDuelingGraphNetwork import QDuelingGraphNetwork
-from src.ExperienceSampler import ExperienceSampler
-from src.ActionSelector import ActionSelector
-from src.TrainLogger import TrainLogger
-from src.EpsilonGreedyPolicy import EpsilonGreedyPolicy
-from src.BoltzmannPolicy import BoltzmannPolicy
-from src.DQLearning import DQLearning
+from deep_reinforcement_learning.QEstimator import QEstimator
+from deep_reinforcement_learning.QNetwork import QNetwork
+from deep_reinforcement_learning.QDuelingNetwork import QDuelingNetwork
+from deep_reinforcement_learning.QDuelingGraphNetwork import QDuelingGraphNetwork
+from deep_reinforcement_learning.ExperienceSampler import ExperienceSampler
+from deep_reinforcement_learning.ActionSelector import ActionSelector
+from deep_reinforcement_learning.TrainLogger import TrainLogger
+from deep_reinforcement_learning.EpsilonGreedyPolicy import EpsilonGreedyPolicy
+from deep_reinforcement_learning.BoltzmannPolicy import BoltzmannPolicy
+from deep_reinforcement_learning.DQLearning import DQLearning
 import gymnasium as gym
 import torch
 from pathlib import Path

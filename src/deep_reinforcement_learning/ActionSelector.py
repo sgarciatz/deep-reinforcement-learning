@@ -1,6 +1,7 @@
 import torch
 import math
 import numpy as np
+from deep_reinforcement_learning.Policy import Policy
 
 class ActionSelector(object):
 
@@ -11,7 +12,7 @@ class ActionSelector(object):
     """
 
     def __init__(self,
-                 policy: "Policy",
+                 policy: Policy,
                  decay_strategy: str = 'linear',
                  start_exploration_rate: float = 1,
                  end_exploration_rate: float = 0.1,

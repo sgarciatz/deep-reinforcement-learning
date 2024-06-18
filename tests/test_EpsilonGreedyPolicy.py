@@ -1,7 +1,7 @@
 import unittest
 import torch
 import numpy as np
-from src.EpsilonGreedyPolicy import EpsilonGreedyPolicy
+from deep_reinforcement_learning.EpsilonGreedyPolicy import EpsilonGreedyPolicy
 
 class test_EpsilonGreedyPolicy(unittest.TestCase):
 

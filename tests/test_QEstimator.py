@@ -1,9 +1,9 @@
 import unittest
 import torch
 import random
-from src.QEstimator import QEstimator
-from src.QDuelingNetwork import QDuelingNetwork
-from src.Experience import Experience
+from deep_reinforcement_learning.QEstimator import QEstimator
+from deep_reinforcement_learning.QDuelingNetwork import QDuelingNetwork
+from deep_reinforcement_learning.Experience import Experience
 
 
 class test_QNetwork(unittest.TestCase):

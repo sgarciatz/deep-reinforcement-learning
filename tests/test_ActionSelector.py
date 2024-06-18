@@ -1,8 +1,8 @@
 import unittest
 import torch
-from src.ActionSelector import ActionSelector
-from src.BoltzmannPolicy import BoltzmannPolicy
-from src.EpsilonGreedyPolicy import EpsilonGreedyPolicy
+from deep_reinforcement_learning.ActionSelector import ActionSelector
+from deep_reinforcement_learning.BoltzmannPolicy import BoltzmannPolicy
+from deep_reinforcement_learning.EpsilonGreedyPolicy import EpsilonGreedyPolicy
 
 class test_ActionSelector(unittest.TestCase):
 

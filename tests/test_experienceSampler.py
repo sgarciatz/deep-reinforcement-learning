@@ -1,6 +1,6 @@
 import unittest
-from src.ExperienceSampler import ExperienceSampler
-from src.Experience import Experience
+from deep_reinforcement_learning.ExperienceSampler import ExperienceSampler
+from deep_reinforcement_learning.Experience import Experience
 
 
 class test_ExperienceSampler(unittest.TestCase):

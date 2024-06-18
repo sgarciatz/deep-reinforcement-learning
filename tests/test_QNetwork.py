@@ -1,6 +1,6 @@
 import unittest
 import torch
-from src.QNetwork import QNetwork
+from deep_reinforcement_learning.QNetwork import QNetwork
 
 class test_QNetwork(unittest.TestCase):
 

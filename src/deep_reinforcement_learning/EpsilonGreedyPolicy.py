@@ -1,5 +1,5 @@
 import torch
-from src.Policy import Policy
+from deep_reinforcement_learning.Policy import Policy
 
 
 class EpsilonGreedyPolicy(Policy):
