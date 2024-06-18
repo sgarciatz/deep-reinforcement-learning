@@ -70,6 +70,7 @@ class DQLearning(object):
         n_experiences = self.h
         done = True
         experience = None
+        next_state = None
         for i in range(n_experiences):
             if (done):
                 seed = random.randint(0, sys.maxsize)
