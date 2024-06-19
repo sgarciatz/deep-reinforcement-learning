@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -16,19 +17,18 @@ class QNetwork(nn.Module):
                  n_actions: int,
                  layers: list,
                  device: str = "cpu"):
+        """Create the NN stacking the layers
 
-        """Create the NN stacking the layers.
-
-        Arguments:
-        - n_observations: int = the number of observations and size of
-          the input layer.
-        - n_actions: int = the number of differenct actions and the
-          size of the output layer.
-        - layers: a list with the number of Linear layers and their
-          number of neurons.
-        - device: str = the device for pytorch (cuda or cpu).
+        Args:
+            n_observations (int): The number of observations and size of
+            the input layer.
+            n_actions (int): The number of different actions and the
+            size of the output layer.
+            layers (list): A list with the number of Linear layers and
+            their number of neurons.
+            device (str, optional): The device for pytorch (cuda or cpu).
+            Defaults to "cpu".
         """
-
         super(QNetwork, self).__init__()
         self.n_actions = n_actions
         input_layer = nn.Linear(n_observations, layers[0])
@@ -44,14 +44,15 @@ class QNetwork(nn.Module):
             *hidden_layers,
             output_layer).to(device)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Feed input data into the Q-Network.
 
-        """Feed input data into the Q-Network
+        Args:
+            x (torch.Tensor): A minibatch of states.
 
-        Parameters:
-        - x = A minibatch of states.
+        Returns:
+            _type_: The resulting logits.
         """
-
-        logits = self.layer_stack(x)
+        logits = self.layer_stack(x.repeat(1,1))
         return logits
 

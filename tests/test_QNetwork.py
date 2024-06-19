@@ -43,7 +43,7 @@ class test_QNetwork(unittest.TestCase):
         net = QNetwork(n_obs, n_act, layers, device)
         x = torch.tensor([i for i in range(32)], dtype=torch.float32)
         y = net(x)
-        self.assertEqual(len(y), n_act)
+        self.assertEqual(y.shape[1], n_act)
 
     def test_batch_forward(self):
         """Test that the forward output is consistent with the action

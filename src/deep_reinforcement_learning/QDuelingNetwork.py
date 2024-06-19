@@ -62,5 +62,4 @@ class QDuelingNetwork(nn.Module):
         adv = self.adv_output_layer(y)
         adv_mean = torch.mean(adv, dim=1, keepdim=True)
         output = value + adv - adv_mean
-        print((output.shape))
         return output
