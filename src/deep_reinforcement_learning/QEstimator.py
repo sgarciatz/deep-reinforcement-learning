@@ -1,4 +1,5 @@
 import torch
+from torch import Tensor
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
@@ -55,7 +56,7 @@ class QEstimator(object):
         self.variation = variation
         self.output_path = output_path
 
-    def calculate_q_loss(self, batch):
+    def calculate_q_loss(self, batch) -> tuple[Tensor, Tensor]:
         """Given a batch, calculate the loss using the given loss_fn.
         """
         states = torch.tensor(np.array([e.state for e in batch]),

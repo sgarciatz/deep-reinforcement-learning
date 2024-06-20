@@ -4,7 +4,7 @@ import torch
 from deep_reinforcement_learning.Experience import Experience
 
 
-class ExperienceSampler:
+class ExperienceMemory:
 
 
     """

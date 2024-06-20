@@ -4,7 +4,7 @@ from deep_reinforcement_learning.QEstimator import QEstimator
 from deep_reinforcement_learning.QNetwork import QNetwork
 from deep_reinforcement_learning.QDuelingNetwork import QDuelingNetwork
 from deep_reinforcement_learning.QDuelingGraphNetwork import QDuelingGraphNetwork
-from deep_reinforcement_learning.ExperienceSampler import ExperienceSampler
+from deep_reinforcement_learning.ExperienceMemory import ExperienceMemory
 from deep_reinforcement_learning.ActionSelector import ActionSelector
 from deep_reinforcement_learning.TrainLogger import TrainLogger
 from deep_reinforcement_learning.EpsilonGreedyPolicy import EpsilonGreedyPolicy
@@ -190,7 +190,7 @@ class ConfigurationLoader(object):
 
         return actionSelector
 
-    def get_memory(self) -> ExperienceSampler:
+    def get_memory(self) -> ExperienceMemory:
         """
         Given the configuration, create and return an ExperienceSampler.
         """
@@ -199,7 +199,7 @@ class ConfigurationLoader(object):
         memory_size = config["memory_size"]
         epsilon = config["epsilon"]
         alpha = config["alpha"]
-        memory = ExperienceSampler(memory_size,
+        memory = ExperienceMemory(memory_size,
                                    memory_type,
                                    self.device,
                                    epsilon,

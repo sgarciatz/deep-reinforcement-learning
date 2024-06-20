@@ -1,5 +1,5 @@
 import unittest
-from deep_reinforcement_learning.ExperienceSampler import ExperienceSampler
+from deep_reinforcement_learning.ExperienceMemory import ExperienceMemory
 from deep_reinforcement_learning.Experience import Experience
 
 
@@ -16,7 +16,7 @@ class test_ExperienceSampler(unittest.TestCase):
         device = "cpu"
         epsilon = 1e-4
         alpha = 1.0
-        experienceSampler = ExperienceSampler(buffer_max_size,
+        experienceSampler = ExperienceMemory(buffer_max_size,
                                               sampling_policy,
                                               device)
         self.assertEqual(buffer_max_size,
@@ -34,7 +34,7 @@ class test_ExperienceSampler(unittest.TestCase):
         device = "cpu"
         epsilon = 1e-4
         alpha = 1.0
-        experienceSampler = ExperienceSampler(buffer_max_size,
+        experienceSampler = ExperienceMemory(buffer_max_size,
                                               sampling_policy,
                                               device,
                                               epsilon,
