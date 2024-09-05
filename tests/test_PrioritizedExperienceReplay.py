@@ -108,7 +108,7 @@ class test_PrioritizedExperienceReplay(unittest.TestCase):
             epsilon=epsilon,
             alpha=alpha)
         priority1 = 5.0
-        priority2 = 2.0
+        priority2 = 3.0
         priority3 = 1.0
         experience1 = Experience(np.array([0, 0, 0, 0, 1]),
                                  2,
