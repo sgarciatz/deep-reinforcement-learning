@@ -6,7 +6,7 @@ from deep_reinforcement_learning.QDuelingNetwork import QDuelingNetwork
 from deep_reinforcement_learning.Experience import Experience
 
 
-class test_QNetwork(unittest.TestCase):
+class test_QEstimator(unittest.TestCase):
 
     def test_initialization(self):
         """check that the QEstimator is initialized correctly.
@@ -18,7 +18,7 @@ class test_QNetwork(unittest.TestCase):
         device = "cpu"
         update_policy = "replace"
         update_freq = 50
-        variation = "dqn"
+        variation = "ddqn"
         policy_net = QDuelingNetwork(n_obs, n_act, layers, device)
         target_net = QDuelingNetwork(n_obs, n_act, layers, device)
         target_net.load_state_dict(policy_net.state_dict())
@@ -44,34 +44,6 @@ class test_QNetwork(unittest.TestCase):
         self.assertEqual(device, q_estimator.device)
         self.assertEqual(update_policy, q_estimator.update_policy)
         self.assertEqual(variation, q_estimator.variation)
-
-        n_experiences = 100
-        random.seed(24)
-        batch = []
-        for index in range(n_experiences):
-            state = [float(random.randrange(0, 9)) for _ in range(n_obs)]
-            action = random.randint(0, 4)
-            reward = random.randrange(-1, 1)
-            next_state = [float(random.randrange(0, 9)) for _ in range(n_obs)]
-            done = False
-            priority = 1000
-            experience = Experience(state,
-                                    action,
-                                    reward,
-                                    next_state,
-                                    done,
-                                    priority)
-            batch.append(experience)
-        q_estimator.calculate_q_loss(batch)
-        self.assertEqual(policy_net, q_estimator.q_estimator)
-        self.assertEqual(target_net, q_estimator.second_q_estimator)
-        self.assertEqual(optimizer, q_estimator.optimizer)
-        self.assertEqual(loss_fn, q_estimator.loss_fn)
-        self.assertEqual(gamma, q_estimator.gamma)
-        self.assertEqual(device, q_estimator.device)
-        self.assertEqual(update_policy, q_estimator.update_policy)
-        self.assertEqual(variation, q_estimator.variation)
-
 
     def test_replace_update(self):
         """Check that when update_second_q_estimator is called,
@@ -104,22 +76,26 @@ class test_QNetwork(unittest.TestCase):
                                  variation)
         n_experiences = 100
         random.seed(24)
-        batch = []
+        states = []
+        actions = []
+        rewards = []
+        next_states = []
+        dones = []
+        priorities = []
         for index in range(n_experiences):
-            state = [float(random.randrange(0, 9)) for _ in range(n_obs)]
-            action = random.randint(0, 4)
-            reward = random.randrange(-1, 1)
-            next_state = [float(random.randrange(0, 9)) for _ in range(n_obs)]
-            done = False
-            priority = 1000
-            experience = Experience(state,
-                                    action,
-                                    reward,
-                                    next_state,
-                                    done,
-                                    priority)
-            batch.append(experience)
-        loss, _ = q_estimator.calculate_q_loss(batch)
+            states.append([float(random.randrange(0, 9)) for _ in range(n_obs)])
+            actions.append(random.randint(0, 4))
+            rewards.append(random.randrange(-1, 1))
+            next_states.append([float(random.randrange(0, 9)) for _ in range(n_obs)])
+            dones.append(False)
+            priorities.append(1000)
+        batch = {"states": torch.tensor(states),
+                 "actions": torch.tensor(actions),
+                 "next_states": torch.tensor(next_states),
+                 "rewards": torch.tensor(rewards),
+                 "dones": torch.tensor(dones),
+                 "priorities": torch.tensor(priorities)}
+        loss, _, _ = q_estimator.calculate_q_loss(batch)
         self.assertEqual(
             q_estimator.q_estimator.state_dict().__str__(),
             q_estimator.second_q_estimator.state_dict().__str__())
@@ -163,22 +139,26 @@ class test_QNetwork(unittest.TestCase):
                                  variation)
         n_experiences = 100
         random.seed(24)
-        batch = []
+        states = []
+        actions = []
+        rewards = []
+        next_states = []
+        dones = []
+        priorities = []
         for index in range(n_experiences):
-            state = [float(random.randrange(0, 9)) for _ in range(n_obs)]
-            action = random.randint(0, 4)
-            reward = random.randrange(-1, 1)
-            next_state = [float(random.randrange(0, 9)) for _ in range(n_obs)]
-            done = False
-            priority = 1000
-            experience = Experience(state,
-                                    action,
-                                    reward,
-                                    next_state,
-                                    done,
-                                    priority)
-            batch.append(experience)
-        loss, _ = q_estimator.calculate_q_loss(batch)
+            states.append([float(random.randrange(0, 9)) for _ in range(n_obs)])
+            actions.append(random.randint(0, 4))
+            rewards.append(random.randrange(-1, 1))
+            next_states.append([float(random.randrange(0, 9)) for _ in range(n_obs)])
+            dones.append(False)
+            priorities.append(1000)
+        batch = {"states": torch.tensor(states),
+                 "actions": torch.tensor(actions),
+                 "next_states": torch.tensor(next_states),
+                 "rewards": torch.tensor(rewards),
+                 "dones": torch.tensor(dones),
+                 "priorities": torch.tensor(priorities)}
+        loss, _, _ = q_estimator.calculate_q_loss(batch)
         self.assertEqual(
             q_estimator.q_estimator.state_dict().__str__(),
             q_estimator.second_q_estimator.state_dict().__str__())

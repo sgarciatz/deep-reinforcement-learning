@@ -1,22 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-import math
-
-class QDuelingGraphNetwork(nn.Module):
+from gymnasium.spaces.graph import GraphInstance
 
 
-    """
-    This network is a variation of the traditional QNetwork where the
-    output layer is divided into two parts and graph convolutions are
-    used to aggregate the input.
-
-    The Q value function is calculated as the sum of the V value
-    function and the Advantaje value function for each actions minus
-    the mean Advantaje value. In that way, the learning process is less
-    sensible to meaningless states.
-    """
+class QGraphNetwork(nn.Module):
 
     def __init__(self,
                  node_observations: int,
@@ -24,7 +12,7 @@ class QDuelingGraphNetwork(nn.Module):
                  graph_convolutions: int,
                  actions: int,
                  device: str = "cpu"):
-        super(QDuelingGraphNetwork, self).__init__()
+        super(QGraphNetwork, self).__init__()
 
         self.node_observations: int = node_observations
         self.edge_observations: int = edge_observations
@@ -44,17 +32,10 @@ class QDuelingGraphNetwork(nn.Module):
             ).to(device=self.device)
             self.mlps.append(mlp)
         self.mlps = nn.ModuleList(self.mlps)
-        # Equivalent to the readout layer in the QGraphNetwork
-        self.readout_v = nn.Linear(1, 1)
-        self.readout_adv = nn.Linear(1, self.n_actions)
+        self.readout_mlp = nn.Linear(1, self.n_actions)
+
+
     def forward(self, x: tuple[torch.Tensor, torch.Tensor, torch.Tensor]):
-
-        """Feed input data into the QDuelingNetwork
-
-        Parameters:
-        - x = A minibatch of states.
-        """
-
         node_features = torch.tensor(x[0]).repeat((1,1,1)).to(self.device)
         edge_features = torch.tensor(x[1]).repeat((1,1,1)).to(self.device)
         adj_matrix = torch.tensor(x[2]).repeat((1,1,1)).to(self.device)
@@ -81,20 +62,17 @@ class QDuelingGraphNetwork(nn.Module):
         # transposed to -> batch, k (graph_layers), nodes, features
         k_node_embeddings = k_node_embeddings.transpose(0, 1)
         graph_embedding = k_node_embeddings.sum(dim=1).sum(dim=2).sum(dim=1).repeat((1,1)).T
-        adv_values = self.readout_adv(graph_embedding)
-        v_values = self.readout_v(graph_embedding)
-        adv_mean = torch.mean(adv_values, dim=1, keepdim=True)
-        q_values = v_values + adv_values - adv_mean
-        return q_values
+        graph_embedding = self.readout_mlp(graph_embedding)
+        return graph_embedding
 
-# torch.manual_seed(10)
+# torch.manual_seed(0)
 
 # node_observations = 2
 # edge_observations = 1
 # graph_convolutions = 2
 # actions = 4
 
-# qgn = QDuelingGraphNetwork(node_observations,
+# qgn = QGraphNetwork(node_observations,
 #                     edge_observations,
 #                     graph_convolutions,
 #                     actions,

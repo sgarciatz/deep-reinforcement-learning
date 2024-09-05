@@ -39,39 +39,49 @@ class TrainLogger(object):
         self.data = []
 
 
-    def add_training_step(self, step, expl_rate, loss, reward, ep_length):
+    def add_training_step(self,
+                          step: int,
+                          expl_rate: float,
+                          loss: float,
+                          kl_divergence: float,
+                          reward: float,
+                          ep_length: int):
+        """Inserts a new row into the data DataFrame with the step
+          information.
 
-        """
-        Inserts a new row into the data DataFrame with the step
-        information.
-
-        Arguments:
-        - step: The number of the current step.
-        - loss: The mean loss of the training step.
-        - expl_rate: The current exploration rate.
-        - reward: The reward obtained in the validation.
-        - ep_length: The mean episode duration of the validation.
+        Args:
+            step (int): The number of the current step.
+            expl_rate (float): The current exploration rate.
+            loss (float): The mean loss of the training step.
+            kl_divergence (float): The mean Kullback Leibler divergence of
+              the training step.
+            reward (float): The reward obtained in the validation.
+            ep_length (int): The mean episode duration of the validation.
         """
 
         row = {"Training Step": step,
                "Exploration Rate": expl_rate,
                "Loss": loss,
+               "KL Divergence": kl_divergence,
                "Avg episode reward": reward,
                "Avg episode length": ep_length}
         self.data.append(row)
 
         self.writer.add_scalar("Exploration Rate / Training Step",
-                          row["Exploration Rate"],
-                          row["Training Step"])
+                               row["Exploration Rate"],
+                               row["Training Step"])
         self.writer.add_scalar("Loss / Training Step",
-                          row["Loss"],
-                          row["Training Step"])
+                               row["Loss"],
+                               row["Training Step"])
+        self.writer.add_scalar("KL Divergence / Training Step",
+                               row["KL Divergence"],
+                               row["Training Step"])
         self.writer.add_scalar("Avg episode reward / Training Step",
-                          row["Avg episode reward"],
-                          row["Training Step"])
+                               row["Avg episode reward"],
+                               row["Training Step"])
         self.writer.add_scalar("Avg episode length / Training Step",
-                          row["Avg episode length"],
-                          row["Training Step"])
+                               row["Avg episode length"],
+                               row["Training Step"])
         self.writer.flush()
 
     def print_training_header(self):

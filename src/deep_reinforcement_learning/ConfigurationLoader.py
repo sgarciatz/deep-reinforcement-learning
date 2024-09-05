@@ -4,7 +4,10 @@ from deep_reinforcement_learning.QEstimator import QEstimator
 from deep_reinforcement_learning.QNetwork import QNetwork
 from deep_reinforcement_learning.QDuelingNetwork import QDuelingNetwork
 from deep_reinforcement_learning.QDuelingGraphNetwork import QDuelingGraphNetwork
+from deep_reinforcement_learning.QGraphNetwork import QGraphNetwork
 from deep_reinforcement_learning.ExperienceMemory import ExperienceMemory
+from deep_reinforcement_learning.UniformExperienceReplay import UniformExperienceReplay
+from deep_reinforcement_learning.PrioritizedExperienceReplay import PrioritizedExperienceReplay
 from deep_reinforcement_learning.ActionSelector import ActionSelector
 from deep_reinforcement_learning.TrainLogger import TrainLogger
 from deep_reinforcement_learning.EpsilonGreedyPolicy import EpsilonGreedyPolicy
@@ -44,7 +47,7 @@ class ConfigurationLoader(object):
             self.device = torch.device("cuda")
         self.set_env()
 
-    def set_env(self) -> gym.Env:
+    def  set_env(self) -> gym.Env:
         """
         Sets the gym enviroment where the agent will be trained.
         """
@@ -75,9 +78,7 @@ class ConfigurationLoader(object):
         return optimizer
 
     def get_loss_fn(self, loss_fn_id):
-        """
-        Maps a configuration parameter to a PyTorch optimizer.
-        """
+        """Maps a configuration parameter to a PyTorch optimizer."""
         if (loss_fn_id == "mse"):
             loss_fn = torch.nn.MSELoss()
         elif (loss_fn_id == "mae"):
@@ -86,13 +87,10 @@ class ConfigurationLoader(object):
             loss_fn = torch.nn.CrossEntropyLoss()
         elif (loss_fn_id == "huber"):
             loss_fn = torch.nn.HuberLoss()
-
         return loss_fn
 
     def get_q_estimator(self) -> QEstimator:
-        """
-        Given the configuration loaded, create and return a QEstimator.
-        """
+        """Return a QEstimator based on the given configuration."""
         n_obs = gym.spaces.utils.flatten_space(
                     self.env.observation_space).shape[0]
         n_act = gym.spaces.utils.flatten_space(self.env.action_space).shape[0]
@@ -101,14 +99,6 @@ class ConfigurationLoader(object):
         if ("type" in config):
             network_type = config["type"]
         layers = config["layers"]
-        if (network_type == "graph_dueling"):
-            n_uavs = len(self.env.get_wrapper_attr("network_graph").uav_list)
-            n_mss = len(self.env.get_wrapper_attr("network_graph").ms_list)
-            policy_net = QDuelingGraphNetwork(n_obs,
-                                              n_uavs,
-                                              n_mss,
-                                              layers,
-                                              device = self.device)
         if (network_type == "dueling"):
             policy_net = QDuelingNetwork(n_obs,
                                          n_act,
@@ -119,6 +109,15 @@ class ConfigurationLoader(object):
                                   n_act,
                                   layers,
                                   device = self.device)
+        elif (network_type == "graph"):
+            node_observations = config["node_observations"]
+            edge_observations = config["edge_observations"]
+            graph_convolutions = config["graph_convolutions"]
+            policy_net = QGraphNetwork(node_observations=node_observations,
+                                       edge_observations=edge_observations,
+                                       graph_convolutions=graph_convolutions,
+                                       actions=n_act,
+                                       device=self.device)
         optim_id = config["optimizer"]
         learning_rate = config["learning_rate"]
         optim = self.get_optimizer(optim_id,
@@ -132,14 +131,6 @@ class ConfigurationLoader(object):
         variation = self.configuration["variation"]
         target_net = None
         if (variation == "ddqn" or variation == "target"):
-            if (network_type == "graph_dueling"):
-                n_uavs = len(self.env.get_wrapper_attr("network_graph").uav_list)
-                n_mss = len(self.env.get_wrapper_attr("network_graph").ms_list)
-                target_net = QDuelingGraphNetwork(n_obs,
-                                  n_uavs,
-                                  n_mss,
-                                  layers,
-                                  device = self.device)
             if (network_type == "dueling"):
                 target_net = QDuelingNetwork(n_obs,
                                              n_act,
@@ -150,6 +141,12 @@ class ConfigurationLoader(object):
                                       n_act,
                                       layers,
                                       device = self.device)
+            elif (network_type == "graph"):
+                target_net = QGraphNetwork(node_observations=node_observations,
+                            edge_observations=edge_observations,
+                            graph_convolutions=graph_convolutions,
+                            actions=n_act,
+                            device=self.device)
             target_net.load_state_dict(policy_net.state_dict())
         if (not Path.exists(self.models_data_path)):
             os.makedirs(self.models_data_path)
@@ -195,15 +192,18 @@ class ConfigurationLoader(object):
         Given the configuration, create and return an ExperienceSampler.
         """
         config = self.configuration["hyperparameters"]["memory"]
-        memory_type = config["type"]
+
         memory_size = config["memory_size"]
-        epsilon = config["epsilon"]
-        alpha = config["alpha"]
-        memory = ExperienceMemory(memory_size,
-                                   memory_type,
-                                   self.device,
-                                   epsilon,
-                                   alpha)
+        memory_type = config["type"]
+        if (memory_type == "simple"):
+            memory = UniformExperienceReplay(memory_size, self.device)
+        elif (memory_type == "per"):
+            epsilon = config["epsilon"]
+            alpha = config["alpha"]
+            memory = PrioritizedExperienceReplay(memory_size,
+                                                 self.device,
+                                                 epsilon,
+                                                 alpha)
         return memory
 
     def get_parameters(self) -> dict:

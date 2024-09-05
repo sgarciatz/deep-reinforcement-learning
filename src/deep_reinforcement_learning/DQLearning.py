@@ -56,13 +56,14 @@ class DQLearning(object):
         self.environment: gym.Env = parameters["env"]
 
         self.q_estimator: QEstimator = parameters["q_estimator"]
-        self.experience_sampler: ExperienceMemory = parameters["memory"]
+        self.experience_memory: ExperienceMemory = parameters["memory"]
         self.action_selector: ActionSelector = parameters["action_selector"]
 
         #Prepare the logging class TrainLogger
         self.logger: TrainLogger = parameters["logger"]
 
-    def _gather_experiences(self):
+    def _gather_experiences(self,
+                            n_experiences: int | None = None):
 
         """Add ``samples_per_step`` Experiences to the memory.
 
@@ -70,8 +71,8 @@ class DQLearning(object):
         buffer. This is the first step of the loop of the DQN
         Algorithm.
         """
-
-        n_experiences = self.samples_per_step
+        if (n_experiences == None):
+            n_experiences = self.samples_per_step
         done = True
         experience = None
         next_state = None
@@ -94,7 +95,7 @@ class DQLearning(object):
                                     next_state,
                                     done,
                                     99)
-            self.experience_sampler.add_experience(experience)
+            self.experience_memory.add_experience(experience)
 
     def validate_learning(self, n_validations: int):
 
@@ -129,8 +130,10 @@ class DQLearning(object):
                 ep_reward += reward
             rewards.append(ep_reward)
             ep_lengths.append(ep_length)
+        avg_reward = sum(rewards) / n_validations
+        avg_ep_length = sum(ep_lengths) / n_validations
+        return avg_reward, avg_ep_length
 
-        return sum(rewards) / n_validations, sum(ep_lengths) / n_validations
 
     def train(self):
         """
@@ -153,33 +156,36 @@ class DQLearning(object):
                 decrease exploring rate
             ```
         """
-        self.logger.print_training_header()
         step_losses: list[float] = []
+        step_kl_divergence: list[float] = []
         batch: list[Experience] = []
         for step in range(1, self.training_steps + 1):
             step_losses = []
             self._gather_experiences()
             for _ in range(self.batches):
-                batch = self.experience_sampler.sample_experience(self.batch_size)
+                batch = self.experience_memory.sample_experience(
+                    self.batch_size)
                 for _ in range(self.updates_per_batch):
-                    loss, td_error = self.q_estimator.calculate_q_loss(batch)
+                    loss, td_error, kl_divergence =\
+                        self.q_estimator.calculate_q_loss(batch)
                     self.q_estimator.update_q_estimator(loss)
-                    self.experience_sampler.update_batch_priorities(
+                    self.experience_memory.update_batch_priorities(
                         batch,
                         td_error)
                     step_losses.append(loss.item())
+                    step_kl_divergence.append(kl_divergence.item())
             reward, ep_length = self.validate_learning(10)
             expl_rate = self.action_selector.exploration_rate
-            self.logger.add_training_step(step,
-                                          expl_rate,
-                                          sum(step_losses) / len(step_losses),
-                                          reward,
-                                          ep_length)
-            self.logger.print_training_step()
+            self.logger.add_training_step(
+                step,
+                expl_rate,
+                sum(step_losses) / len(step_losses),
+                sum(step_kl_divergence) / len(step_kl_divergence),
+                reward,
+                ep_length)
             self.action_selector.decay_exploration_rate(step,
                                                         self.training_steps)
             self.q_estimator.update_second_q_estimator(step)
-        self.logger.print_training_footer()
         self.q_estimator.pickle_model()
 
     def test(self, n_validations: int) -> tuple[int, int]:
