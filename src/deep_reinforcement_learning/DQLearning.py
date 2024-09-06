@@ -10,6 +10,8 @@ from deep_reinforcement_learning.TrainLogger import TrainLogger
 from deep_reinforcement_learning.Experience import Experience
 import random
 import sys
+import time
+
 
 class DQLearning(object):
     """The implementantion of the Deep Q Learning algorithm.
@@ -73,6 +75,8 @@ class DQLearning(object):
         """
         if (n_experiences == None):
             n_experiences = self.samples_per_step
+            if (len(self.experience_memory.experience_buffer) == 0):
+                n_experiences = self.batch_size * self.batches
         done = True
         experience = None
         next_state = None
@@ -160,18 +164,29 @@ class DQLearning(object):
         step_kl_divergence: list[float] = []
         batch: list[Experience] = []
         for step in range(1, self.training_steps + 1):
+            # e, b, l, u, p = [], [], [], [], []
             step_losses = []
+            # start_time = time.time_ns()
             self._gather_experiences()
+            # e.append((time.time_ns() -start_time)*10e-9)
             for _ in range(self.batches):
+                # start_time = time.time_ns()
                 batch = self.experience_memory.sample_experience(
                     self.batch_size)
+                # b.append((time.time_ns() -start_time)*10e-9)
                 for _ in range(self.updates_per_batch):
+                    # start_time = time.time_ns()
                     loss, td_error, kl_divergence =\
                         self.q_estimator.calculate_q_loss(batch)
+                    # l.append((time.time_ns() -start_time)*10e-9)
+                    # start_time = time.time_ns()
                     self.q_estimator.update_q_estimator(loss)
+                    # u.append((time.time_ns() -start_time)*10e-9)
+                    # start_time = time.time_ns()
                     self.experience_memory.update_batch_priorities(
                         batch,
                         td_error)
+                    # p.append((time.time_ns() -start_time)*10e-9)
                     step_losses.append(loss.item())
                     step_kl_divergence.append(kl_divergence.item())
             reward, ep_length = self.validate_learning(10)
@@ -186,6 +201,14 @@ class DQLearning(object):
             self.action_selector.decay_exploration_rate(step,
                                                         self.training_steps)
             self.q_estimator.update_second_q_estimator(step)
+        #     print()
+        #     print(f"Experience generation time {sum(e) / len(e)}")
+        #     print(f"Batch preparation time {sum(b) / len(b)}")
+        #     print(f"Loss calculation time {sum(l) / len(l)}")
+        #     print(f"Q_estimator updating time {sum(u) / len(u)}")
+        #     print(f"Priorities updating time {sum(p) / len(p)}")
+        #     print(f"Training Step time {(sum(e) / len(e)) + (sum(b) / len(b)) + (sum(l) / len(l)) + (sum(u) / len(u)) + (sum(p) / len(p))}")
+        # exit()
         self.q_estimator.pickle_model()
 
     def test(self, n_validations: int) -> tuple[int, int]:

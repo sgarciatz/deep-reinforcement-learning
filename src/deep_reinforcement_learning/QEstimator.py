@@ -72,12 +72,17 @@ class QEstimator(object):
             tuple[Tensor, Tensor]: The loss and the temporal difference
                 error.
         """
-        print(batch)
-        states = batch["states"]
-        actions = batch["actions"]
-        next_states = batch["next_states"]
-        rewards = batch["rewards"]
-        dones = batch["dones"]
+        states = torch.tensor([e.state for e in batch],
+                              dtype=torch.float32).to(self.device)
+        actions = torch.tensor([e.action for e in batch],
+                               dtype=torch.int64).to(self.device)
+
+        next_states = torch.tensor([e.next_state for e in batch],
+                                   dtype=torch.float32).to(self.device)
+        rewards = torch.tensor([e.reward for e in batch],
+                                dtype=torch.float32).to(self.device)
+        dones = torch.tensor([e.done for e in batch],
+                                dtype=torch.float32).to(self.device)
         # Obtain the estimated Q values of the initial state.
         q_preds: Tensor = self.q_estimator(states)
         q_preds_kl: Tensor = softmax(
@@ -115,7 +120,7 @@ class QEstimator(object):
             / (torch.max(q_tars_kl) - torch.min(q_tars_kl))).T).T)
         kl_divergence = kl_div(q_preds_kl.log(),
                                q_tars_kl,
-                               reduction="batchmean")
+                               reduction="mean")
         loss = self.loss_fn(q_preds, q_tars)
         td_error = torch.abs(q_tars - q_preds)
         return loss, td_error, kl_divergence
@@ -125,9 +130,9 @@ class QEstimator(object):
         optimizer.
         """
         loss.backward()
-        nn.utils.clip_grad_norm_(
-            self.q_estimator.parameters(),
-            1.0)
+        # nn.utils.clip_grad_norm_(
+        #     self.q_estimator.parameters(),
+        #     1.0)
         self.optimizer.step()
         self.optimizer.zero_grad()
 
