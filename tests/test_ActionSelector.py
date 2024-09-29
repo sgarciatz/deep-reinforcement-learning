@@ -51,7 +51,7 @@ class test_ActionSelector(unittest.TestCase):
             decay_strategy=decay_strat,
             start_exploration_rate=start_exploration_rate,
             end_exploration_rate=end_explotarion_rate)
-        q_values = torch.tensor([5.0, 4.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.5])
+        q_values = torch.tensor([[5.0, 4.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.5]])
         trials = 1000
         best_action_count = 0
         other_action_count = 0

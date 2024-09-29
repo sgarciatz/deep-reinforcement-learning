@@ -20,7 +20,7 @@ class EpsilonGreedyPolicy(Policy):
         """
         Initializes the epsilon parameter
         """
-        self.epsilon = e
+        self.epsilon: float = e
 
     def select_action(self, q_values: torch.Tensor):
 
@@ -34,15 +34,13 @@ class EpsilonGreedyPolicy(Policy):
         Returns:
         - int: The index that refers to the selected action
         """
-
-        random_number = torch.rand(1).item()
+        random_number: float = torch.rand(1).item()
         condition = (random_number - self.epsilon) > 0.0
         if (condition):
-            action = torch.argmax(q_values).item()
+            action: int = int(torch.argmax(q_values, dim=1).item())
         else:
-            probabilities = torch.ones(q_values.shape, dtype= torch.float64)
-            action = torch.multinomial(probabilities, 1).item()
-
+            probabilities: torch.Tensor = torch.ones(q_values.shape, dtype= torch.float64)
+            action: int = int(torch.multinomial(probabilities, 1).item())
         return action
 
     def update_exploration_rate(self, new_value) -> None:

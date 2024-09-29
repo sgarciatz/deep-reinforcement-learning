@@ -35,7 +35,7 @@ class TrainLogger(object):
         output_dir = Path.joinpath(output_path,
                                    training_name)
         self.writer = SummaryWriter(log_dir=output_dir)
-        self.writer.add_text("run_params", experiment_info)
+        #self.writer.add_text("run_params", experiment_info)
         self.data = []
 
 
@@ -43,9 +43,8 @@ class TrainLogger(object):
                           step: int,
                           expl_rate: float,
                           loss: float,
-                          kl_divergence: float,
                           reward: float,
-                          ep_length: int):
+                          ep_length: float):
         """Inserts a new row into the data DataFrame with the step
           information.
 
@@ -56,13 +55,12 @@ class TrainLogger(object):
             kl_divergence (float): The mean Kullback Leibler divergence of
               the training step.
             reward (float): The reward obtained in the validation.
-            ep_length (int): The mean episode duration of the validation.
+            ep_length (float): The mean episode duration of the validation.
         """
 
         row = {"Training Step": step,
                "Exploration Rate": expl_rate,
                "Loss": loss,
-               "KL Divergence": kl_divergence,
                "Avg episode reward": reward,
                "Avg episode length": ep_length}
         self.data.append(row)
@@ -73,9 +71,7 @@ class TrainLogger(object):
         self.writer.add_scalar("Loss / Training Step",
                                row["Loss"],
                                row["Training Step"])
-        self.writer.add_scalar("KL Divergence / Training Step",
-                               row["KL Divergence"],
-                               row["Training Step"])
+
         self.writer.add_scalar("Avg episode reward / Training Step",
                                row["Avg episode reward"],
                                row["Training Step"])

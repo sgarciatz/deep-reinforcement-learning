@@ -28,12 +28,12 @@ class Experience(object):
                  done,
                  priority: float = 1.0e2):
         """Create a new Experience, i.e. a (s,a,r,s',d,p) tuple."""
-        self._state = state
-        self._action = action
-        self._reward = reward
-        self._next_state = next_state
-        self._done = done
-        self._priority = priority
+        self._state: torch.Tensor | tuple = state
+        self._action: torch.Tensor = action
+        self._reward: torch.Tensor = reward
+        self._next_state: torch.Tensor = next_state
+        self._done: torch.Tensor = done
+        self._priority: torch.Tensor = torch.scalar_tensor(priority)
 
     @property
     def state(self) -> torch.Tensor | tuple:
@@ -108,7 +108,7 @@ class Experience(object):
         return self._priority
 
     @priority.setter
-    def priority(self, new_priority: int|torch.Tensor):
+    def priority(self, new_priority: torch.Tensor):
         """Updates the priority of the experience
 
         Args:
@@ -116,6 +116,7 @@ class Experience(object):
             experience.
         """
         self._priority = new_priority
+
     def __str__(self) -> str:
         """Parses the object information into a human-readable string.
         """

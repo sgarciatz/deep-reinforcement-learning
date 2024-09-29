@@ -36,9 +36,9 @@ class QGraphNetwork(nn.Module):
 
 
     def forward(self, x: tuple[torch.Tensor, torch.Tensor, torch.Tensor]):
-        node_features = torch.tensor(x[0]).repeat((1,1,1)).to(self.device)
-        edge_features = torch.tensor(x[1]).repeat((1,1,1)).to(self.device)
-        adj_matrix = torch.tensor(x[2]).repeat((1,1,1)).to(self.device)
+        node_features = x[0].clone().detach().repeat((1,1,1)).to(self.device)
+        edge_features = x[1].clone().detach().repeat((1,1,1)).to(self.device)
+        adj_matrix = x[2].clone().detach().repeat((1,1,1)).to(self.device)
         # base_case
         node_embeddings = node_features
         k_node_embeddings = torch.zeros_like(node_embeddings).repeat(

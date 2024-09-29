@@ -55,7 +55,7 @@ class test_EpsilonGreedyPolicy(unittest.TestCase):
         """
         e = 0.0
         epsilonG_policy = EpsilonGreedyPolicy(e)
-        q_values = torch.tensor([1.0, 1.5, 3.0, 0.5, 2.0])
+        q_values = torch.tensor([[1.0, 1.5, 3.0, 0.5, 2.0]])
         trials = 1000
         best_action_count = 0
         for _ in range(trials):
@@ -70,13 +70,13 @@ class test_EpsilonGreedyPolicy(unittest.TestCase):
 
         e = 0.3
         epsilonG_policy = EpsilonGreedyPolicy(e)
-        q_values = torch.tensor([1.0, 1.5, 3.0, 0.5, 2.0])
+        q_values = torch.tensor([[1.0, 1.5, 3.0, 0.5, 2.0]])
         trials = 1000
         best_action_count = 0
         for _ in range(trials):
             if (epsilonG_policy.select_action(q_values) == q_values.argmax()):
                 best_action_count += 1
-        minimum_expectation = 1/len(q_values) * trials
+        minimum_expectation = 1/len(q_values[0]) * trials
         best_action_count = float(best_action_count)
         self.assertGreater(best_action_count, minimum_expectation)
 

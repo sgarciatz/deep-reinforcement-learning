@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, SupportsFloat
 import torch
 from torch import Tensor
 import gymnasium as gym
 import random
+from deep_reinforcement_learning.PrioritizedExperienceReplay import PrioritizedExperienceReplay
 from deep_reinforcement_learning.QEstimator import QEstimator
 from deep_reinforcement_learning.ExperienceMemory import ExperienceMemory
 from deep_reinforcement_learning.ActionSelector import ActionSelector
@@ -64,6 +65,10 @@ class DQLearning(object):
         #Prepare the logging class TrainLogger
         self.logger: TrainLogger = parameters["logger"]
 
+        self.done: bool = True
+        self.experience: Experience | None = None
+        self.next_state: torch.Tensor | None = None
+
     def _gather_experiences(self,
                             n_experiences: int | None = None):
 
@@ -77,29 +82,29 @@ class DQLearning(object):
             n_experiences = self.samples_per_step
             if (len(self.experience_memory.experience_buffer) == 0):
                 n_experiences = self.batch_size * self.batches
-        done = True
-        experience = None
-        next_state = None
+
         for i in range(n_experiences):
-            if (done):
+            if (self.done):
                 seed = random.randint(0, sys.maxsize)
                 state, info = self.environment.reset(seed=seed)
             else:
-                state = next_state
-            raw_state = torch.Tensor(state).to(self.device)
+                state = self.next_state
             with (torch.no_grad()):
-                q_tar = self.q_estimator.q_estimator(raw_state)
-            action = self.action_selector.select_action(q_tar)
-            next_state, reward, terminated, truncated, info =\
+                q_tar = self.q_estimator.policy_qnet(state)
+            action: torch.Tensor = torch.tensor(
+                self.action_selector.select_action(q_tar),
+                dtype=torch.int32
+            )
+            self.next_state, reward, terminated, truncated, info =\
                 self.environment.step(action)
             done = terminated or truncated
-            experience = Experience(state,
-                                    action,
-                                    reward,
-                                    next_state,
-                                    done,
-                                    99)
-            self.experience_memory.add_experience(experience)
+            self.experience = Experience(state,
+                                         action,
+                                         reward,
+                                         self.next_state,
+                                         done,
+                                         99.0)
+            self.experience_memory.add_experience(self.experience)
 
     def validate_learning(self, n_validations: int):
 
@@ -124,18 +129,25 @@ class DQLearning(object):
             state: Tensor = Tensor(state).to(self.device)
             while (not done):
                 with (torch.no_grad()):
-                    q_estimate: Tensor = self.q_estimator.q_estimator(state)
-                action: int = self.action_selector.select_action(q_estimate)
+                    q_estimate: Tensor = self.q_estimator.policy_qnet(state)
+                # action: int = self.action_selector.select_action(q_estimate)
+                best_action: int = q_estimate.argmax(dim=1).item()
+                chosen_action: int = self.action_selector.select_action(q_estimate)
+                # print(torch.round(q_estimate, decimals=2), best_action, chosen_action)
                 next_state, reward, terminated, truncated, info =\
-                self.environment.step(action)
+                self.environment.step(action=best_action)
                 state: Tensor = torch.Tensor(next_state).to(self.device)
                 done = terminated or truncated
                 ep_length += 1
-                ep_reward += reward
+                ep_reward += reward # type: ignore
+            # print()
             rewards.append(ep_reward)
             ep_lengths.append(ep_length)
         avg_reward = sum(rewards) / n_validations
         avg_ep_length = sum(ep_lengths) / n_validations
+        self.done = True
+        self.experience = None
+        self.next_state = None
         return avg_reward, avg_ep_length
 
 
@@ -161,7 +173,6 @@ class DQLearning(object):
             ```
         """
         step_losses: list[float] = []
-        step_kl_divergence: list[float] = []
         batch: list[Experience] = []
         for step in range(1, self.training_steps + 1):
             # e, b, l, u, p = [], [], [], [], []
@@ -176,11 +187,11 @@ class DQLearning(object):
                 # b.append((time.time_ns() -start_time)*10e-9)
                 for _ in range(self.updates_per_batch):
                     # start_time = time.time_ns()
-                    loss, td_error, kl_divergence =\
+                    loss, td_error =\
                         self.q_estimator.calculate_q_loss(batch)
                     # l.append((time.time_ns() -start_time)*10e-9)
                     # start_time = time.time_ns()
-                    self.q_estimator.update_q_estimator(loss)
+                    self.q_estimator.update_policy_qnet(loss)
                     # u.append((time.time_ns() -start_time)*10e-9)
                     # start_time = time.time_ns()
                     self.experience_memory.update_batch_priorities(
@@ -188,19 +199,17 @@ class DQLearning(object):
                         td_error)
                     # p.append((time.time_ns() -start_time)*10e-9)
                     step_losses.append(loss.item())
-                    step_kl_divergence.append(kl_divergence.item())
             reward, ep_length = self.validate_learning(10)
             expl_rate = self.action_selector.exploration_rate
             self.logger.add_training_step(
                 step,
                 expl_rate,
                 sum(step_losses) / len(step_losses),
-                sum(step_kl_divergence) / len(step_kl_divergence),
                 reward,
                 ep_length)
             self.action_selector.decay_exploration_rate(step,
                                                         self.training_steps)
-            self.q_estimator.update_second_q_estimator(step)
+            self.q_estimator.update_target_qnet(step)
         #     print()
         #     print(f"Experience generation time {sum(e) / len(e)}")
         #     print(f"Batch preparation time {sum(b) / len(b)}")
@@ -211,13 +220,19 @@ class DQLearning(object):
         # exit()
         self.q_estimator.pickle_model()
 
-    def test(self, n_validations: int) -> tuple[int, int]:
+    def test(self, n_validations: int) -> tuple[float, float]:
         """Test the already trained agent. This method is similar to
         validate_learning but it does not use the policy, instead the
         action with the highest Q value is chosen.
 
         Parameters:
-        - n_validations: int = The number of episodes to carry out.
+        - n_validations: int =
+
+        Args:
+            n_validations (int): The number of episodes to carry out.
+
+        Returns:
+            tuple[float, float]: The average reward and episode length.
         """
         rewards: list[float] = []
         ep_lengths: list[int] = []
@@ -229,14 +244,16 @@ class DQLearning(object):
             state: Tensor = torch.Tensor(state).to(self.device)
             while (not done):
                 with (torch.no_grad()):
-                    q_estimate: Tensor = self.q_estimator.q_estimator(state)
-                action: int = q_estimate.argmax().item()
+                    q_estimate: Tensor = self.q_estimator.policy_qnet(state)
+                action: int = int(q_estimate.argmax().item())
                 next_state, reward, terminated, truncated, info =\
                     self.environment.step(action)
                 state = torch.Tensor(next_state).to(self.device)
                 done = terminated or truncated
                 ep_length += 1
-                ep_reward += reward
+                ep_reward += reward # type: ignore
             rewards.append(ep_reward)
             ep_lengths.append(ep_length)
-        return sum(rewards) / n_validations, sum(ep_lengths) / n_validations
+            mean_reward: float = sum(rewards) / n_validations
+            mean_ep_length: float = sum(ep_lengths) / n_validations
+        return mean_reward, mean_ep_length

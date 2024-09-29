@@ -25,27 +25,26 @@ class BoltzmannPolicy(Policy):
         Args:
             temperature (float, optional): Defaults to 1.
         """
-        self.temperature = temperature
+        self.temperature: float = temperature
 
-    def select_action(self, q_values: "torch.tensor") -> int:
+    def select_action(self, q_values: torch.Tensor) -> int:
         """Given a a batch of q_values associated to (state, action)
         tuples, select the one to perform.
 
         Args:
-            q_values (torch.tensor): The batch of q_values
+            q_values (torch.Tensor): The batch of q_values
 
         Returns:
             int: The index of the action to carry out according to the
             policy.
         """
-
         try:
-            exp_values = torch.exp(q_values / self.temperature)
-            probabilities = exp_values / torch.sum(exp_values)
-            sampled_action = torch.multinomial(probabilities, 1).item()
+            exp_values: torch.Tensor = torch.exp(q_values / self.temperature)
+            probabilities: torch.Tensor = exp_values / torch.sum(exp_values)
+            sampled_action: int = int(torch.multinomial(probabilities, 1).item())
             return sampled_action
         except:
-            self.select_action = lambda q_values: torch.argmax(q_values).item()
+            self.select_action = lambda q_values: int(torch.argmax(q_values).item())
             return self.select_action(q_values)
 
 

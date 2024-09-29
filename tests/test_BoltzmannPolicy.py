@@ -73,5 +73,55 @@ class test_BoltzmannPolicy(unittest.TestCase):
 
         self.assertGreater(best_action_count_1, best_action_count_2)
 
+    def test_action_selection_small(self):
+        """Check action selection works well with q-values within the
+        [0,1] range.
+        """
+
+        temp_low: int = 0.50
+        temp_high: int = 5.0
+        pl: BoltzmannPolicy = BoltzmannPolicy(temperature=temp_low)
+        ph: BoltzmannPolicy = BoltzmannPolicy(temperature=temp_high)
+        q_values: torch.Tensor = torch.tensor([0.9, 0.1, 0.1, 0.1],
+                                              dtype=torch.float)
+        trials: int = 1000
+        best_action_pl: int = 0
+        best_action_ph: int = 0
+        action_pl: int = 0
+        action_ph: int = 0
+        for _ in range(trials):
+            action_pl = pl.select_action(q_values=q_values)
+            action_ph = ph.select_action(q_values=q_values)
+            if (action_pl == 0):
+                best_action_pl += 1
+            if (action_ph == 0):
+                best_action_ph += 1
+        self.assertGreater(best_action_pl, best_action_ph)
+
+    def test_action_selection_small_negative(self):
+        """Check action selection works well with q-values within the
+        [0,1] range.
+        """
+
+        temp_low: int = 0.50
+        temp_high: int = 5.0
+        pl: BoltzmannPolicy = BoltzmannPolicy(temperature=temp_low)
+        ph: BoltzmannPolicy = BoltzmannPolicy(temperature=temp_high)
+        q_values: torch.Tensor = torch.tensor([-0.9, 0.2, 0.1, 0.1],
+                                              dtype=torch.float)
+        trials: int = 1000
+        best_action_pl: int = 0
+        best_action_ph: int = 0
+        action_pl: int = 0
+        action_ph: int = 0
+        for _ in range(trials):
+            action_pl = pl.select_action(q_values=q_values)
+            action_ph = ph.select_action(q_values=q_values)
+            if (action_pl == 1):
+                best_action_pl += 1
+            if (action_ph == 1):
+                best_action_ph += 1
+        self.assertGreater(best_action_pl, best_action_ph)
+
 if __name__ == '__main__':
     unittest.main()

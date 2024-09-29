@@ -1,11 +1,13 @@
 import torch
-from torch import Tensor
 from torch.nn.functional import softmax, kl_div
+from torch.nn.modules.loss import MSELoss, HuberLoss, L1Loss, CrossEntropyLoss
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 from deep_reinforcement_learning.Experience import Experience
+from deep_reinforcement_learning.Policy import Policy
 
+ValidLoss = MSELoss | HuberLoss | L1Loss | CrossEntropyLoss
 
 class QEstimator(object):
     """A estimator of Q-values for (state, action) tuples.
@@ -35,34 +37,35 @@ class QEstimator(object):
     """
 
     def __init__(self,
-                 q_estimator: nn.Module,
+                 policy_qnet: nn.Module,
                  optimizer: optim.Optimizer,
-                 loss_fn,
+                 loss_fn: ValidLoss,
                  gamma: float = 0.9,
                  device: str = "cpu",
                  update_policy: str = "replace",
                  update_param: int|float = 50,
-                 second_q_estimator: nn.Module = None,
+                 target_qnet: nn.Module | None = None,
                  variation: str = "ddqn",
                  output_path: str = "../models/modelito.pt"
                  ):
-        self.device = device
-        self.q_estimator = q_estimator
-        self.n_actions = self.q_estimator.n_actions
-        self.optimizer = optimizer
-        self.loss_fn = loss_fn
-        self.gamma = torch.tensor(gamma)
-        self.update_policy = update_policy
-        self.update_param = update_param
-        self.second_q_estimator = second_q_estimator
-        if (self.second_q_estimator is not None):
-            self.second_q_estimator.load_state_dict(
-                self.q_estimator.state_dict())
-        self.variation = variation
-        self.output_path = output_path
+        self.device: str = device
+        self.policy_qnet: nn.Module = policy_qnet
+        self.n_actions: int = self.policy_qnet.n_actions
+        self.optimizer: optim.Optimizer = optimizer
+        self.loss_fn: ValidLoss = loss_fn
+        self.gamma: torch.Tensor = torch.tensor(gamma).to(self.device)
+        self.update_policy: str = update_policy
+        self.update_param: int|float = update_param
+        self.target_qnet: nn.Module | None = target_qnet
+        if (self.target_qnet is not None):
+            self.target_qnet.load_state_dict(
+                self.policy_qnet.state_dict())
+        self.variation: str = variation
+        self.output_path: str = output_path
 
     def calculate_q_loss(self,
-                         batch: list[Experience]) -> tuple[Tensor, Tensor]:
+                         batch: list[Experience]
+                         ) -> tuple[torch.Tensor, torch.Tensor]:
         """Given a batch, calculate the loss using the given loss_fn.
 
         Args:
@@ -72,93 +75,77 @@ class QEstimator(object):
             tuple[Tensor, Tensor]: The loss and the temporal difference
                 error.
         """
-        states = torch.tensor([e.state for e in batch],
-                              dtype=torch.float32).to(self.device)
-        actions = torch.tensor([e.action for e in batch],
-                               dtype=torch.int64).to(self.device)
-
-        next_states = torch.tensor([e.next_state for e in batch],
-                                   dtype=torch.float32).to(self.device)
-        rewards = torch.tensor([e.reward for e in batch],
-                                dtype=torch.float32).to(self.device)
-        dones = torch.tensor([e.done for e in batch],
-                                dtype=torch.float32).to(self.device)
+        states: torch.Tensor = torch.stack(
+            tuple([e.state for e in batch])).to(self.device)
+        actions: torch.Tensor = torch.stack(
+            tuple([e.action for e in batch]),).to(
+                dtype=torch.int64,
+                device=self.device)
+        next_states: torch.Tensor = torch.stack(
+            tuple([e.next_state for e in batch])).to(self.device)
+        rewards: torch.Tensor = torch.stack(
+            tuple([e.reward for e in batch])).to(self.device)
+        dones: torch.Tensor = torch.stack(
+            tuple([e.done for e in batch])).to(self.device)
         # Obtain the estimated Q values of the initial state.
-        q_preds: Tensor = self.q_estimator(states)
-        q_preds_kl: Tensor = softmax(
-            (q_preds - torch.min(q_preds))\
-                / (torch.max(q_preds) - torch.min(q_preds)),
-            dim=1)
+        q_preds: torch.Tensor = self.policy_qnet(states)
         q_preds = torch.flatten(q_preds.gather(1, actions.repeat((1,1)).T))
         with (torch.no_grad()):
-            if (self.second_q_estimator is not None):
+            if (self.target_qnet is not None):
                 if (self.variation == "ddqn"):
                     # Obtain the Q values of the state to which the agent
                     # transitions.
-                    q_tar_next_idx = self.second_q_estimator(next_states)\
-                                        .max(dim=1).indices.unsqueeze(dim=1)
-                    q_tar_next = self.q_estimator(next_states)
-                    q_tar_next_kl = q_tar_next
-                    q_tar_next = q_tar_next.gather(1, q_tar_next_idx).flatten()
+                    q_tars_next_idx: torch.Tensor = self.target_qnet(next_states)
+                    q_tars_next_idx = q_tars_next_idx.max(dim=1).indices
+                    q_tars_next_idx = q_tars_next_idx.unsqueeze(dim=1)
+                    q_tars_next: torch.Tensor = self.policy_qnet(next_states)
+                    q_tars_next = q_tars_next.gather(1, q_tars_next_idx)
+                    q_tars_next = q_tars_next.flatten()
                 else:
-                    q_tar_next = self.second_q_estimator(next_states)
-                    q_tar_next_kl = q_tar_next
-                    q_tar_next = q_tar_next_kl.max(dim=1).values
+                    q_tars_next = self.target_qnet(next_states)
+                    q_tars_next = q_tars_next.max(dim=1).values
             else:
-                q_tar_next = self.q_estimator(next_states)
-                q_tar_next_kl = q_tar_next
+                q_tars_next = self.policy_qnet(next_states)
 
-                q_tar_next = q_tar_next.max(dim=1).values
-        q_tars: Tensor = rewards + ( dones * self.gamma * q_tar_next)
+                q_tars_next = q_tars_next.max(dim=1).values
+        q_tars: torch.Tensor = rewards + ( dones * self.gamma * q_tars_next)
+        loss: torch.Tensor = self.loss_fn(q_preds, q_tars)
+        td_error: torch.Tensor = torch.abs(q_tars - q_preds)
+        return loss, td_error
 
-        future_reward = (dones * self.gamma).repeat((1, 1)).T * q_tar_next_kl
-        present_reward = rewards.repeat((future_reward.shape[1], 1)).T
-
-        q_tars_kl: Tensor = present_reward + future_reward
-        q_tars_kl = softmax(
-            (((q_tars_kl - torch.min(q_tars_kl))\
-            / (torch.max(q_tars_kl) - torch.min(q_tars_kl))).T).T)
-        kl_divergence = kl_div(q_preds_kl.log(),
-                               q_tars_kl,
-                               reduction="mean")
-        loss = self.loss_fn(q_preds, q_tars)
-        td_error = torch.abs(q_tars - q_preds)
-        return loss, td_error, kl_divergence
-
-    def update_q_estimator(self, loss) -> None:
+    def update_policy_qnet(self,
+                           loss: torch.Tensor) -> None:
         """Updates the primary q_estimator given the loss and the
         optimizer.
         """
         loss.backward()
-        # nn.utils.clip_grad_norm_(
-        #     self.q_estimator.parameters(),
-        #     1.0)
         self.optimizer.step()
         self.optimizer.zero_grad()
 
-    def update_second_q_estimator(self, step: int) -> None:
+    def update_target_qnet(self, step: int) -> None:
         """Updates the secondary q estimator (polyak or replace).
 
         Parameters:
         - step (int): the current step of the training.
         """
-        if (self.second_q_estimator is None):
+        if (self.target_qnet is None):
             return
         if (self.update_policy == "replace"\
             and step % self.update_param == 0):
-            self.second_q_estimator\
-                    .load_state_dict(self.q_estimator.state_dict())
+            print("HOLA")
+            self.target_qnet\
+                    .load_state_dict(self.policy_qnet.state_dict())
         if (self.update_policy == "polyak"):
-            q_dict = self.q_estimator.state_dict()
-            second_q_dict = self.second_q_estimator.state_dict()
+            q_dict = self.policy_qnet.state_dict()
+            second_q_dict = self.target_qnet.state_dict()
             for key in q_dict:
                 second_q_dict[key] = q_dict[key]*self.update_param\
                      + second_q_dict[key]*(1-self.update_param)
-            self.second_q_estimator.load_state_dict(second_q_dict)
+            self.target_qnet.load_state_dict(second_q_dict)
 
     def pickle_model(self):
         """Pickle the resulting model."""
-        torch.save(self.q_estimator.state_dict(), self.output_path)
+        torch.save(self.policy_qnet.state_dict(), self.output_path)
 
     def load_model(self, device: str = "cpu"):
         """Load pickled model.
@@ -167,8 +154,8 @@ class QEstimator(object):
             device (str, optional): ``cpu`` or ``gpu``. Used to let
             torch know what device to use. Defaults to "cpu".
         """
-        self.second_q_estimator = None
-        self.q_estimator.load_state_dict(
+        self.target_qnet = None
+        self.policy_qnet.load_state_dict(
             torch.load(self.output_path,
                        map_location=torch.device(device)))
 

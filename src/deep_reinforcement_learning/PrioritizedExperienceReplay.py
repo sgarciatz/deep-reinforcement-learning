@@ -27,13 +27,14 @@ class PrioritizedExperienceReplay(ExperienceMemory):
         """
         super().__init__(buffer_max_size=buffer_max_size,
                          device=device)
-        self.epsilon = torch.tensor(epsilon).to(self.device)
-        self.alpha = torch.tensor(alpha).to(self.device)
-
+        self.epsilon: torch.Tensor = torch.tensor(epsilon).to(self.device)
+        self.alpha: torch.Tensor = torch.tensor(alpha).to(self.device)
+        self._priorities: deque[float] = deque([], maxlen=buffer_max_size)
 
 
     def add_experience(self, experience: Experience):
         super().add_experience(experience)
+        self._priorities.append(experience.priority)
 
     def sample_experience(self, n_samples: int = 1) -> list[Experience]:
         """Samples ``n_samples`` from the ``experience_buffer``
@@ -46,7 +47,6 @@ class PrioritizedExperienceReplay(ExperienceMemory):
         Returns:
             list[Experience]: The samples.
         """
-        self._priorities = [e.priority for e in self.experience_buffer]
         samples: list[Experience] = choices(self.experience_buffer,
                                             k = n_samples,
                                             weights= self._priorities)
@@ -62,12 +62,14 @@ class PrioritizedExperienceReplay(ExperienceMemory):
             batch (_type_): _description_
             td_error (_type_): _description_
         """
-        denominator = torch.tensor(self._priorities).to(self.device) + self.epsilon
+        priorities: torch.Tensor = torch.tensor(
+            self._priorities,
+            dtype=torch.float32).to(device=self.device)
+        denominator: torch.Tensor = priorities + self.epsilon
         denominator = pow(denominator, self.alpha)
         denominator = sum(denominator)
-        numerator = td_error + self.epsilon
+        numerator: torch.Tensor = td_error + self.epsilon
         numerator = pow(numerator, self.alpha)
-        new_priorities = numerator / denominator
+        new_priorities: torch.Tensor = numerator / denominator
         for i, new_p in enumerate(new_priorities):
             batch[i].priority = new_p.item()
-            self._priorities[i] = new_p.item()

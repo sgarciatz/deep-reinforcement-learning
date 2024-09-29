@@ -29,10 +29,10 @@ class ExperienceMemory(ABC):
 
         self.experience_buffer: deque[Experience] =\
             deque([], maxlen=buffer_max_size)
-        self.device = device
+        self.device: str = device
 
 
-    def add_experience(self, experience: Experience):
+    def add_experience(self, experience: Experience) -> None:
         """Inserts an experience into ``experience_buffer``.
 
         Args:
@@ -48,5 +48,5 @@ class ExperienceMemory(ABC):
     @abstractmethod
     def update_batch_priorities(self,
                                 batch: list,
-                                td_error:torch.tensor) -> None:
+                                td_error:torch.Tensor) -> None:
         ...

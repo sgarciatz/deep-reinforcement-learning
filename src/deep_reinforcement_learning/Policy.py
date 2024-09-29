@@ -8,11 +8,11 @@ class Policy(ABC):
     Policy is an interface that specifies the methods that policy
     concrete classes must implement.
     """
-    
+
     @abstractmethod
-    def select_action(self, state, actions):
+    def select_action(self, state) -> int:
         pass
-        
+
     @abstractmethod
-    def update_exploration_rate(self, new_value: float):
+    def update_exploration_rate(self, new_value: float) -> None:
         pass

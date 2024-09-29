@@ -34,7 +34,7 @@ class UniformExperienceReplay(ExperienceMemory):
                                             n_samples)
         return samples
 
-    def update_priorities(self):
+    def update_batch_priorities(self, *args) -> None:
         """Do nothing since in ``UniformExperienceReplay`` the
         priorities are ignored.
         """
